@@ -13,17 +13,23 @@ class CacheQuerySet(models.query.QuerySet):
     def __len__(self):
         return QueryLenTask(self.model, self.query).get()
 
-    def _get_hash(self, query):
-        """
-        Calculate SHA1 hash for the query using its string representation
-        """
-        return hashlib.sha1(str(query)).hexdigest()
-
 
 class BaseQueryTask(CacheTask):
     def __init__(self, model, query):
         self.model = model
         self.query = query
+
+    def key(self, *args, **kwargs):
+        return '%s-%s' % (
+            self.model.__name__,
+            self._get_hash(self.query),
+        )
+
+    def _get_hash(self, query):
+        """
+        Calculate SHA1 hash for the query using its string representation
+        """
+        return hashlib.sha1(str(query)).hexdigest()
 
     def get_constructor_kwargs(self):
         return {
