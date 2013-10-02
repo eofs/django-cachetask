@@ -7,7 +7,11 @@ DATABASES = {
 
 INSTALLED_APPS = (
     'cachetask',
+    'cachetask.tests.testapp',
 )
 
 
 SECRET_KEY = 'abcde12345'
+
+# Celery broker
+BROKER_URL = 'memory://'
