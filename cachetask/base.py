@@ -13,7 +13,7 @@ class CacheTask(object):
 
     # By default lifetime for cache item is 5 minutes. After this value is
     # considered stale and requires update.
-    lifetime = 600
+    lifetime = 300
 
     # This value controls how often new Celery task may be created for a single
     # cache item.
@@ -32,7 +32,11 @@ class CacheTask(object):
         delta = time.time() - expiry
         if delta > 0:
             # Cache MISS but STALE data
-            # Refresh cache asynchronously
+            # Refresh cache asynchronously and set short timeout value to
+            # prevent cache hammering. During this timeout period no new
+            # Celery tasks are created but stale data is returned.
+            timeout = self.timeout(*args, **kwargs)
+            self.cache_set(key, timeout, data)
             self.refresh_async(*args, **kwargs)
         return data
 
