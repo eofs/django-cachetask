@@ -11,7 +11,11 @@ class CacheQuerySet(models.query.QuerySet):
         return QueryGetTask(self.model, qs.query).get()
 
     def __len__(self):
-        return QueryLenTask(self.model, self.query).get()
+        # Get executed QuerySet from cache (or run synchronously to get one)
+        qs = QueryLenTask(self.model, self.query).get()
+        # Using internals, but should be relative stable
+        self._result_cache = qs._result_cache
+        return super(CacheQuerySet, self).__len__()
 
 
 class BaseQueryTask(CacheTask):
@@ -47,6 +51,7 @@ class QueryGetTask(BaseQueryTask):
         qs = self.model.objects.all()
         # Restore original query
         qs.query = self.query
+        # Execute and return result
         return qs.get()
 
 
@@ -57,6 +62,14 @@ class QueryLenTask(BaseQueryTask):
     def run(self, *args, **kwargs):
         # Create a fake query
         qs = self.model.objects.all()
+
+        if type(qs) == CacheQuerySet:
+            # Swap back to original QuerySet to avoid
+            # recursive lookups. Required by GreedyCacheManager.
+            qs.__class__ = models.query.QuerySet
+
         # Restore original query
         qs.query = self.query
-        return len(qs)
+        # Execute the query
+        len(qs)
+        return qs
