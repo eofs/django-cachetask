@@ -107,10 +107,18 @@ class CacheTask(object):
 
     def refresh_async(self, *args, **kwargs):
         tasks.refresh_cache.delay(
+            self.class_path,
+            obj_args=self.get_constructor_args(),
+            obj_kwargs=self.get_constructor_kwargs(),
             call_args=args,
             call_kwargs=kwargs
         )
 
+    def get_constructor_args(self):
+        return ()
+
+    def get_constructor_kwargs(self):
+        return {}
 
     ###################
     # Implement these #
