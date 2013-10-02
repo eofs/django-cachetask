@@ -1,4 +1,3 @@
-import pickle
 import hashlib
 
 from django.db import models
@@ -9,13 +8,10 @@ from cachetask.base import CacheTask
 class CacheQuerySet(models.query.QuerySet):
     def get(self, *args, **kwargs):
         qs = self.filter(*args, **kwargs)
-        p_query = pickle.dumps(qs.query)
-        return QueryGetTask().get(self.model, p_query)
-        #return super(CacheQuerySet, self).get(*args, **kwargs)
+        return QueryGetTask(self.model, qs.query).get()
 
     def __len__(self):
-        p_query = pickle.dumps(self.query)
-        return QueryLenTask().get(self.model, p_query)
+        return QueryLenTask(self.model, self.query).get()
 
     def _get_hash(self, query):
         """
@@ -24,25 +20,37 @@ class CacheQuerySet(models.query.QuerySet):
         return hashlib.sha1(str(query)).hexdigest()
 
 
-class QueryGetTask(CacheTask):
+class BaseQueryTask(CacheTask):
+    def __init__(self, model, query):
+        self.model = model
+        self.query = query
+
+    def get_constructor_kwargs(self):
+        return {
+            'model': self.model,
+            'query': self.query,
+        }
+
+
+class QueryGetTask(BaseQueryTask):
     """
     Cache task to run the query in background worker.
     """
-    def run(self, model, pickled_query):
+    def run(self, *args, **kwargs):
         # Create a fake query
-        qs = model.objects.all()
+        qs = self.model.objects.all()
         # Restore original query
-        qs.query = pickle.loads(pickled_query)
+        qs.query = self.query
         return qs.get()
 
 
-class QueryLenTask(CacheTask):
+class QueryLenTask(BaseQueryTask):
     """
     Cache task to run the query in background worker.
     """
-    def run(self, model, pickled_query):
+    def run(self, *args, **kwargs):
         # Create a fake query
-        qs = model.objects.all()
+        qs = self.model.objects.all()
         # Restore original query
-        qs.query = pickle.loads(pickled_query)
+        qs.query = self.query
         return len(qs)
