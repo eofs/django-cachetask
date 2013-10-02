@@ -17,8 +17,10 @@ class MyModel(MyBaseModel):
     objects = CacheManager()
 
 class MyGreedyModel(MyBaseModel):
-    # Every query is cached
-    # Every cache is great
-    # If a cache is missed
-    # Sysadmin gets quite irate
+    """
+    Every query is cached
+    Every cache is great
+    If a cache is missed
+    Sysadmin gets quite irate
+    """
     objects = GreedyCacheManager()
